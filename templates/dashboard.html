@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="../static/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Add ApexCharts for better animations -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+    <header>
+        <h1>Financial Management System</h1>
+        <nav class="navbar">
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('add_cash') }}">Add Cash</a></li>
+                <li><a href="{{ url_for('track_expenses') }}" class="{% if request.endpoint == 'track_expenses' %}active{% endif %}">Track Expenses</a></li>
+                <li><a href="{{ url_for('upload_receipt') }}" class="nav-link {% if request.endpoint == 'upload_receipt' %}active{% endif %}">
+                    <i class="fas fa-file-upload"></i> Upload Receipt
+                </a></li>
+                <li><a href="{{ url_for('ai_insights') }}" class="nav-link {% if request.endpoint == 'ai_insights' %}active{% endif %}">
+                    <i class="fas fa-brain"></i> AI Insights
+                </a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+        <p>Welcome, {{ username }}!</p>
+    </header>
+    
+    <main class="dashboard-container">
+        <div class="balance-card">
+            <div class="balance-content">
+                <h2><i class="fas fa-wallet"></i> Balance Overview</h2>
+                <div class="balance-amount">
+                    <span class="currency">₹</span>
+                    <span class="amount">{{ "%.2f"|format(total_balance) }}</span>
+                </div>
+                <p class="balance-label">Available Balance</p>
+            </div>
+        </div>
+
+        <div class="expense-summary">
+            <div class="summary-card">
+                <h3><i class="fas fa-list"></i> Recent Expenses</h3>
+                <div class="table-wrapper">
+                    <table class="expense-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Total Spent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category, total in expenses_summary %}
+                            <tr>
+                                <td><i class="fas fa-tag"></i> {{ category }}</td>
+                                <td>₹{{ "%.2f"|format(total) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <!-- Pie Chart for Category Distribution -->
+            <div class="chart-container">
+                <h3>Expense Distribution</h3>
+                <canvas id="categoryPieChart"></canvas>
+            </div>
+
+            <!-- Line Chart for Monthly Trends -->
+            <div class="chart-container">
+                <h3>Monthly Expense Trend</h3>
+                <canvas id="trendLineChart"></canvas>
+            </div>
+
+            <!-- Bar Chart for Category Comparison -->
+            <div class="chart-container">
+                <h3>Category Comparison</h3>
+                <canvas id="categoryBarChart"></canvas>
+            </div>
+
+            <!-- Doughnut Chart for Budget Usage -->
+            <div class="chart-container">
+                <h3>Budget Utilization</h3>
+                <canvas id="budgetDoughnutChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .dashboard-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #00b09b, #96c93d);
+            border-radius: 15px;
+            padding: 2rem;
+            color: white;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .balance-content {
+            text-align: center;
+        }
+
+        .balance-amount {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .currency {
+            font-size: 2rem;
+            vertical-align: super;
+        }
+
+        .balance-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .expense-summary {
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .expense-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .expense-table th,
+        .expense-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .expense-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .expense-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .fas {
+            margin-right: 0.5rem;
+            color: #6c757d;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .balance-amount {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+
+    <script>
+        // Common animation options
+        const animationOptions = {
+            animation: {
+                duration: 2000,
+                easing: 'easeInOutQuart'
+            }
+        };
+
+        // Prepare data
+        const categories = {{ expenses_summary | map(attribute=0) | list | tojson }};
+        const totals = {{ expenses_summary | map(attribute=1) | list | tojson }};
+
+        // 1. Category Pie Chart
+        new Chart(document.getElementById('categoryPieChart'), {
+            type: 'pie',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: totals,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                ...animationOptions,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+
+        // 2. Monthly Trend Line Chart
+        new Chart(document.getElementById('trendLineChart'), {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Monthly Expenses',
+                    data: totals,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)'
+                }]
+            },
+            options: {
+                ...animationOptions,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 3. Category Bar Chart
+        new Chart(document.getElementById('categoryBarChart'), {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [{
+                    label: 'Amount Spent',
+                    data: totals,
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...animationOptions,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 4. Budget Doughnut Chart
+        const totalExpense = totals.reduce((a, b) => a + b, 0);
+        const totalBudget = {{ total_balance if total_balance else 0 }};
+        
+        new Chart(document.getElementById('budgetDoughnutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Spent', 'Remaining'],
+                datasets: [{
+                    data: [totalExpense, Math.max(0, totalBudget - totalExpense)],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(75, 192, 192, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                ...animationOptions,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

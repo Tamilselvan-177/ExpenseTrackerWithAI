@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Insights - Financial Management</title>
+    <link rel="stylesheet" href="../static/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        header {
+            background-color: #2e7d32;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .navbar {
+            width: 100%;
+            background-color: #2e7d32; /* Dark green to match the header */
+        }
+        
+        nav ul {
+            display: flex;
+            justify-content: space-around; /* Space items evenly across the navbar */
+            list-style-type: none;
+            padding: 0.5em 0; /* Add padding for a bit of height */
+            margin: 0; /* Remove default margin */
+        }
+        
+        nav ul li {
+            flex-grow: 1; /* Ensure items take equal space */
+            text-align: center;
+        }
+        
+        nav ul li a {
+            display: inline-block;
+            width: 100%; /* Full width for each link */
+            color: #ffffff;
+            text-decoration: none;
+            padding: 0.5em 0;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            text-align: center; /* Center text */
+        }
+        
+        nav ul li a:hover {
+            background-color: #388e3c; /* Darker green on hover */
+        }
+       
+        
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+</head>
+<body>
+    <header>
+        <h1>Financial Management System</h1>
+        <nav class="navbar">
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('add_cash') }}">Add Cash</a></li>
+                <li><a href="{{ url_for('track_expenses') }}" class="{% if request.endpoint == 'track_expenses' %}active{% endif %}">Track Expenses</a></li>
+                <li><a href="{{ url_for('upload_receipt') }}" class="nav-link {% if request.endpoint == 'upload_receipt' %}active{% endif %}">
+                    <i class="fas fa-file-upload"></i> Upload Receipt
+                </a></li>
+                <li><a href="{{ url_for('ai_insights') }}" class="nav-link {% if request.endpoint == 'ai_insights' %}active{% endif %}">
+                    <i class="fas fa-brain"></i> AI Insights
+                </a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+
+        <p>Welcome, {{ username }}!</p>
+    </header>
+
+    <!-- Update the header styles to match dashboard -->
+    
+    <!-- REMOVE or COMMENT OUT this block if present -->
+    <style>
+        /* Remove or comment out this block to avoid overriding dashboard.css */
+        /*
+        header {
+            background-color: #f5f7fa;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .navbar ul { ... }
+        .navbar a { ... }
+        .navbar a:hover { ... }
+        .navbar a.active { ... }
+        @media (max-width: 768px) { ... }
+        */
+    </style>
+
+    <main class="ai-insights-container animate__animated animate__fadeIn">
+        <h1><i class="fas fa-brain"></i> AI Financial Insights</h1>
+
+        {% if insights %}
+        <div class="insights-grid">
+            <!-- Summary Cards -->
+            <section class="summary-cards animate__animated animate__fadeInUp">
+                <div class="summary-card">
+                    <i class="fas fa-wallet"></i>
+                    <div class="card-content">
+                        <h3>Monthly Spending</h3>
+                        <p>₹{{ "%.2f"|format(insights.spending_insights.total_spent) }}</p>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <i class="fas fa-piggy-bank"></i>
+                    <div class="card-content">
+                        <h3>Savings Rate</h3>
+                        <p>{{ "%.1f"|format(insights.savings_rate) }}%</p>
+                    </div>
+                </div>
+                <div class="summary-card">
+                    <i class="fas fa-chart-line"></i>
+                    <div class="card-content">
+                        <h3>Spending Trend</h3>
+                        <p>{{ insights.trend_direction }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Smart Recommendations -->
+            <section class="recommendations-section animate__animated animate__fadeInUp">
+                <h2><i class="fas fa-lightbulb"></i> Smart Recommendations</h2>
+                <div class="recommendations-list">
+                    {% for recommendation in insights.recommendations %}
+                    <div class="recommendation-card animate__animated animate__fadeInRight" style="animation-delay: {{ loop.index * 0.2 }}s">
+                        <i class="fas {{ recommendation.icon }}"></i>
+                        <div>
+                            <h4>{{ recommendation.title }}</h4>
+                            <p>{{ recommendation.description }}</p>
+                            {% if recommendation.saving_potential %}
+                            <div class="saving-potential">
+                                Potential Savings: ₹{{ "%.2f"|format(recommendation.saving_potential) }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Advanced Analytics -->
+            <section class="analytics-section">
+                <div class="chart-grid">
+                    <!-- Spending Trends -->
+                    <div class="chart-container animate__animated animate__fadeInUp">
+                        <h3><i class="fas fa-chart-line"></i> Spending Trends</h3>
+                        <div id="trendChart"></div>
+                    </div>
+
+                    <!-- Category Distribution -->
+                    <div class="chart-container animate__animated animate__fadeInUp">
+                        <h3><i class="fas fa-chart-pie"></i> Expense Distribution</h3>
+                        <div id="categoryChart"></div>
+                    </div>
+
+                    <!-- Budget Progress -->
+                    <div class="chart-container animate__animated animate__fadeInUp">
+                        <h3><i class="fas fa-bullseye"></i> Budget Progress</h3>
+                        <div id="budgetProgress"></div>
+                    </div>
+
+                    <!-- Savings Forecast -->
+                    <div class="chart-container animate__animated animate__fadeInUp">
+                        <h3><i class="fas fa-forecast"></i> Savings Forecast</h3>
+                        <div id="savingsForecast"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Financial Health Score -->
+            <section class="health-score-section animate__animated animate__fadeInUp">
+                <h2><i class="fas fa-heart"></i> Financial Health Score</h2>
+                <div class="score-container">
+                    <div class="score-circle" data-score="{{ insights.health_score }}">
+                        <svg viewBox="0 0 36 36" class="circular-chart">
+                            <path d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="#eee"
+                                stroke-width="3" />
+                            <path d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="#4CAF50"
+                                stroke-width="3"
+                                stroke-dasharray="{{ insights.health_score }}, 100" />
+                            <text x="18" y="20.35" class="score-text">{{ insights.health_score }}</text>
+                        </svg>
+                    </div>
+                    <div class="score-details">
+                        <h4>Score Breakdown</h4>
+                        <ul>
+                            <li>Savings Rate: {{ insights.metrics.savings_score }}/100</li>
+                            <li>Spending Pattern: {{ insights.metrics.spending_score }}/100</li>
+                            <li>Budget Adherence: {{ insights.metrics.budget_score }}/100</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+        {% else %}
+        <div class="no-data-message animate__animated animate__fadeIn">
+            <i class="fas fa-chart-bar"></i>
+            <p>Not enough data to generate insights. Please add more transactions.</p>
+            <a href="{{ url_for('add_expense') }}" class="btn-add-data">Add Expense</a>
+        </div>
+        {% endif %}
+    </main>
+
+    <style>
+        /* Modern and Clean Design */
+        :root {
+            --primary-color: #2196F3;
+            --success-color: #4CAF50;
+            --warning-color: #FFC107;
+            --danger-color: #F44336;
+            --text-color: #333;
+            --bg-color: #f5f7fa;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .insights-grid {
+            display: grid;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Charts Grid */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /* Recommendations */
+        .recommendation-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+        }
+
+        /* Health Score */
+        .health-score-section {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .score-circle {
+            width: 200px;
+            margin: 0 auto;
+        }
+
+        .circular-chart {
+            width: 100%;
+            height: auto;
+        }
+
+        .score-text {
+            font-size: 0.5em;
+            text-anchor: middle;
+            fill: var(--text-color);
+            font-weight: bold;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        // Initialize all charts with smooth animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Trend Chart
+            const trendOptions = {
+                chart: {
+                    type: 'area',
+                    height: 350,
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 800,
+                        animateGradually: {
+                            enabled: true,
+                            delay: 150
+                        },
+                        dynamicAnimation: {
+                            enabled: true,
+                            speed: 350
+                        }
+                    }
+                },
+                // ... other chart configurations
+            };
+
+            // Initialize charts
+            const trendChart = new ApexCharts(document.querySelector("#trendChart"), trendOptions);
+            trendChart.render();
+
+            // Add scroll-triggered animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate__fadeInUp');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.chart-container').forEach((el) => observer.observe(el));
+        });
+    </script>
+
+    <!-- Add this section after the summary cards and before the recommendations -->
+    <section class="detailed-insights animate__animated animate__fadeInUp">
+        <h2><i class="fas fa-comments-dollar"></i> Personalized Financial Insights</h2>
+        <div class="insights-cards">
+            <!-- Spending Behavior -->
+            <div class="insight-card">
+                <div class="insight-header">
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>Spending Behavior</h3>
+                </div>
+                <div class="insight-content">
+                    <p>{{ insights.spending_analysis }}</p>
+                    <ul class="behavior-points">
+                        {% for point in insights.spending_points %}
+                        <li><i class="fas fa-check"></i> {{ point }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+    
+            <!-- Budget Analysis -->
+            <div class="insight-card">
+                <div class="insight-header">
+                    <i class="fas fa-balance-scale"></i>
+                    <h3>Budget Analysis</h3>
+                </div>
+                <div class="insight-content">
+                    <p>{{ insights.budget_analysis }}</p>
+                    <div class="category-breakdown">
+                        {% for category in insights.category_analysis %}
+                        <div class="category-item">
+                            <span>{{ category.name }}</span>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: {{ category.percentage }}%"></div>
+                            </div>
+                            <span>{{ category.status }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+    
+            <!-- Future Projections -->
+            <div class="insight-card">
+                <div class="insight-header">
+                    <i class="fas fa-crystal-ball"></i>
+                    <h3>Future Outlook</h3>
+                </div>
+                <div class="insight-content">
+                    <p>{{ insights.future_projection }}</p>
+                    <div class="projection-metrics">
+                        <div class="metric">
+                            <span>Estimated Savings (3 months)</span>
+                            <h4>₹{{ "%.2f"|format(insights.projected_savings) }}</h4>
+                        </div>
+                        <div class="metric">
+                            <span>Potential Improvements</span>
+                            <h4>₹{{ "%.2f"|format(insights.improvement_potential) }}</h4>
+                        </div>
+                    </div>
+                </div>
+    
+            <!-- Action Items -->
+            <div class="insight-card">
+                <div class="insight-header">
+                    <i class="fas fa-tasks"></i>
+                    <h3>Recommended Actions</h3>
+                </div>
+                <div class="insight-content">
+                    <div class="action-items">
+                        {% for action in insights.action_items %}
+                        <div class="action-item">
+                            <div class="action-priority {{ action.priority }}">
+                                <i class="fas fa-exclamation"></i>
+                            </div>
+                            <div class="action-details">
+                                <h4>{{ action.title }}</h4>
+                                <p>{{ action.description }}</p>
+                                <div class="action-impact">
+                                    <span>Impact: </span>
+                                    <div class="impact-stars">
+                                        {% for i in range(action.impact) %}
+                                        <i class="fas fa-star"></i>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Add this CSS to your existing styles -->
+    <style>
+        .detailed-insights {
+            margin-top: 2rem;
+        }
+    
+        .insights-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+    
+        .insight-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+    
+        .insight-card:hover {
+            transform: translateY(-5px);
+        }
+    
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+    
+        .behavior-points {
+            list-style: none;
+            padding: 0;
+            margin-top: 1rem;
+        }
+    
+        .behavior-points li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+    
+        .category-breakdown {
+            margin-top: 1rem;
+        }
+    
+        .category-item {
+            margin-bottom: 1rem;
+        }
+    
+        .progress-bar {
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+        }
+    
+        .progress {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+    
+        .action-items {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+    
+        .action-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+    
+        .action-priority {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+    
+        .action-priority.high {
+            background: var(--danger-color);
+        }
+    
+        .action-priority.medium {
+            background: var(--warning-color);
+        }
+    
+        .action-priority.low {
+            background: var(--success-color);
+        }
+    
+        .impact-stars {
+            display: inline-flex;
+            gap: 2px;
+            color: #ffd700;
+        }
+    
+        .projection-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+    
+        .metric {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+    
+        .metric h4 {
+            margin: 0.5rem 0 0;
+            color: var(--primary-color);
+        }
+    </style>
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .insights-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</body>
+</html>

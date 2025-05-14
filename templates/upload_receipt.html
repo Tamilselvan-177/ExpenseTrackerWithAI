@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Receipt</title>
+    <link rel="stylesheet" href="../static/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <h1>Upload Receipt</h1>
+        <nav class="navbar">
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('add_cash') }}">Add Cash</a></li>
+                <li><a href="{{ url_for('track_expenses') }}">Track Expenses</a></li>
+                <li><a href="{{ url_for('ai_insights') }}">AI Insights</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </nav>
+        <p>Welcome, {{ username }}!</p>
+    </header>
+    <main>
+        <section class="upload-section">
+            <h2><i class="fas fa-receipt"></i> Upload Your Bill/Receipt</h2>
+            <div class="upload-container">
+                <form action="{{ url_for('upload_receipt') }}" method="post" enctype="multipart/form-data">
+                    <div class="file-input-container">
+                        <label for="receipt">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Select Receipt (PDF only)</span>
+                        </label>
+                        <input type="file" id="receipt" name="receipt" accept="application/pdf" required>
+                    </div>
+                    <button type="submit"><i class="fas fa-magic"></i> Upload & Analyze</button>
+                </form>
+            </div>
+            
+            {% if error %}
+            <div class="alert error">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>{{ error }}</p>
+            </div>
+            {% endif %}
+            
+            {% if success %}
+            <div class="alert success">
+                <i class="fas fa-check-circle"></i>
+                <p>{{ success | replace('\n', '<br>') | safe }}</p>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <style>
+        .upload-section {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .upload-container {
+            text-align: center;
+            padding: 2rem;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .file-input-container {
+            margin-bottom: 1rem;
+        }
+        
+        .file-input-container label {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: #f5f5f5;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .file-input-container label:hover {
+            background: #eee;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        button {
+            padding: 1rem 2rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .alert {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .fas {
+            margin-right: 0.5rem;
+        }
+    </style>
+</body>
+</html>
